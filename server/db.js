@@ -116,3 +116,14 @@ function validarInteres(interes) {
     const validos = ['FACIAL', 'CORPORAL', 'GIFTCARD', 'NO_DEFINIDO'];
     return validos.includes(interes) ? interes : 'NO_DEFINIDO';
 }
+
+export async function setEstadoGestionHumana(leadId) {
+    await pool.query(
+        `UPDATE leads
+         SET estado_dashboard = 'GESTION_HUMANA',
+             estado_updated_at = NOW()
+         WHERE id = $1
+           AND estado_dashboard NOT IN ('CERRADO', 'AGENDADO', 'POSPUESTO')`,
+        [leadId]
+    );
+}

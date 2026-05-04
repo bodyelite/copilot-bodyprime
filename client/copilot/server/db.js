@@ -92,3 +92,14 @@ export async function getHistorial(leadId, limite = 20) {
     `, [leadId, limite]);
     return rows.reverse();
 }
+
+export async function setEstadoGestionHumana(leadId) {
+    await pool.query(
+        `UPDATE leads
+         SET estado_dashboard = 'GESTION_HUMANA',
+             estado_updated_at = NOW()
+         WHERE id = $1
+           AND estado_dashboard NOT IN ('CERRADO', 'AGENDADO', 'POSPUESTO')`,
+        [leadId]
+    );
+}

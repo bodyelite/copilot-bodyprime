@@ -4,8 +4,10 @@ import {
     setAgente, postponeLead,
     registrarAccion, getStatsAgentes,
     getHistorial, setEstado,
+    setEstadoGestionHumana,
 } from '../db.js';
-import { generarCopilot } from '../services/openai.js';
+import { generarCopilot, enviarTexto } from '../services/openai.js';
+import { enviarTexto as waEnviarTexto } from '../services/whatsapp.js';
 
 const router = Router();
 
@@ -34,6 +36,20 @@ router.post('/:id/agente', async (req, res) => {
     try {
         await setAgente(req.params.id, agente);
         await registrarAccion(req.params.id, agente, 'asignacion');
+        await setEstadoGestionHumana(req.params.id);
+        res.json({ ok: true });
+    } catch (e) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+router.post('/:id/mensaje', async (req, res) => {
+    const { agente, telefono, texto } = req.body;
+    if (!agente || !telefono || !texto) return res.status(400).json({ error: 'Faltan campos' });
+    try {
+        await waEnviarTexto(telefono, texto);
+        await registrarAccion(req.params.id, agente, 'mensaje_enviado', texto.slice(0, 100));
+        await setEstadoGestionHumana(req.params.id);
         res.json({ ok: true });
     } catch (e) {
         res.status(500).json({ error: e.message });
@@ -66,7 +82,7 @@ router.post('/:id/posponer', async (req, res) => {
 
 router.get('/:id/copilot', async (req, res) => {
     try {
-        const lead     = await getLeadById(req.params.id);
+        const lead = await getLeadById(req.params.id);
         if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
         const historial = await getHistorial(lead.id);
         if (!historial.length) return res.json({ resumen: 'Sin historial de mensajes.', guion: '' });

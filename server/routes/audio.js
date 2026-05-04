@@ -4,7 +4,7 @@ import os from 'os';
 import fs from 'fs';
 import { transcribir } from '../services/openai.js';
 import { subirAudio, enviarAudio } from '../services/whatsapp.js';
-import { registrarAccion } from '../db.js';
+import { registrarAccion, setEstadoGestionHumana } from '../db.js';
 
 const router = Router();
 const upload = multer({ dest: os.tmpdir() });
@@ -15,7 +15,10 @@ router.post('/send', upload.single('audio'), async (req, res) => {
     try {
         const mediaId = await subirAudio(req.file.path);
         await enviarAudio(telefono, mediaId);
-        if (leadId) await registrarAccion(leadId, agente, 'audio_enviado');
+        if (leadId) {
+            await registrarAccion(leadId, agente, 'audio_enviado');
+            await setEstadoGestionHumana(leadId);
+        }
         res.json({ ok: true });
     } catch (e) { res.status(500).json({ error: e.message }); }
     finally { fs.unlink(req.file.path, () => {}); }
